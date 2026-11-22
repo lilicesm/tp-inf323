@@ -17,10 +17,6 @@ class SemMoradoresAtivosError(EscalaError):
     """Não há moradores ativos para receber tarefas."""
 
 
-class CadastroDuplicadoError(EscalaError):
-    """Já existe morador ou tarefa com o mesmo id."""
-
-
 class EscalaNaoGeradaError(EscalaError):
     """Consulta de escala antes de qualquer escala ter sido gerada."""
 
