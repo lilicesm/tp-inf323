@@ -4,82 +4,119 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>República · Escala de rodízio</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; color: #222; }
-    h1 { margin-bottom: .25rem; }
-    section { margin-top: 1.5rem; }
-    form { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
-    input, select, button { padding: .35rem .5rem; font: inherit; }
-    table { border-collapse: collapse; width: 100%; margin-top: .5rem; }
-    th, td { border-bottom: 1px solid #ddd; padding: .4rem; text-align: left; }
-    tr.destaque { background: #fff4c2; font-weight: 600; }
-    .erro { background: #fde2e2; color: #8a1c1c; padding: .5rem .75rem; border-radius: 4px; }
-    .muted { color: #666; }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-  <h1>Escala de rodízio</h1>
-  <p class="muted">Módulo F7/F8 · rodízio ponderado pelo peso das tarefas</p>
+  {% macro avatar(id, nome) -%}
+    <span class="avatar" style="--h: {{ (id[1:]|int * 47) % 360 }}">{{ nome[:1]|upper }}</span>
+  {%- endmacro %}
 
-  {% for mensagem in get_flashed_messages() %}
-    <p class="erro">{{ mensagem }}</p>
-  {% endfor %}
+  <header class="topo">
+    <div>
+      <h1>Escala de rodízio</h1>
+      <p>Módulo F7/F8 · rodízio ponderado pelo peso das tarefas</p>
+    </div>
+  </header>
 
-  <section>
-    <h2>Moradores</h2>
-    <form method="post" action="{{ url_for('paginas.cadastrar_morador') }}">
-      <input name="nome" placeholder="nome" required>
-      <button>Cadastrar morador</button>
-    </form>
-    <p>
-      {% for m in moradores %}<a href="?morador={{ m.id }}">{{ m.nome }}</a>{% if not loop.last %} · {% endif %}{% else %}<span class="muted">Nenhum morador.</span>{% endfor %}
-    </p>
-  </section>
+  <main>
+    {% for mensagem in get_flashed_messages() %}
+      <p class="erro" role="alert">{{ mensagem }}</p>
+    {% endfor %}
 
-  <section>
-    <h2>Tarefas</h2>
-    <form method="post" action="{{ url_for('paginas.cadastrar_tarefa') }}">
-      <input name="nome" placeholder="nome" required>
-      <input name="peso" type="number" min="1" max="5" placeholder="peso (1–5)" required>
-      <button>Cadastrar tarefa</button>
-    </form>
-    <p>
-      {% for t in tarefas %}{{ t.nome }} ({{ t.peso }}){% if not loop.last %} · {% endif %}{% else %}<span class="muted">Nenhuma tarefa.</span>{% endfor %}
-    </p>
-  </section>
+    <div class="grade">
+      <section class="card">
+        <h2>Moradores</h2>
+        <p>Clique no nome do morador para destacá-lo na tabela de tarefas!</p>
+        <form method="post" action="{{ url_for('paginas.cadastrar_morador') }}">
+          <input name="nome" placeholder="nome" aria-label="Nome do morador" required>
+          <button>Cadastrar morador</button>
+        </form>
+        {% if moradores %}
+          <ul class="lista">
+            {% for m in moradores %}
+              <li><a class="chip{{ ' ativo' if m.id == destaque }}" href="?morador={{ m.id }}">{{ avatar(m.id, m.nome) }}{{ m.nome }}</a></li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="vazio">Nenhum morador.</p>
+        {% endif %}
+      </section>
 
-  <section>
-    <h2>Gerar próxima escala</h2>
-    <form method="post" action="{{ url_for('paginas.gerar_escala') }}">
-      <input name="inicio" type="date" required>
-      <select name="periodicidade">
-        <option value="semanal">Semanal</option>
-        <option value="quinzenal">Quinzenal</option>
-        <option value="mensal">Mensal</option>
-      </select>
-      <button>Gerar escala</button>
-    </form>
-  </section>
+      <section class="card">
+        <h2>Tarefas</h2>
+        <form method="post" action="{{ url_for('paginas.cadastrar_tarefa') }}">
+          <input name="nome" placeholder="nome" aria-label="Nome da tarefa" required>
+          <input name="peso" type="number" min="1" max="5" placeholder="peso (1–5)" aria-label="Peso da tarefa" required>
+          <button>Cadastrar tarefa</button>
+        </form>
+        {% if tarefas %}
+          <ul class="lista">
+            {% for t in tarefas %}
+              <li><span class="chip tarefa">{{ t.nome }} <span class="peso" data-peso="{{ t.peso }}">{{ t.peso }}</span></span></li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="vazio">Nenhuma tarefa.</p>
+        {% endif %}
+      </section>
+    </div>
 
-  <section>
-    <h2>Escala atual</h2>
-    {% if escala %}
-      <p class="muted">{{ escala.ciclo.inicio.strftime('%d/%m/%Y') }} a {{ escala.ciclo.fim.strftime('%d/%m/%Y') }}</p>
-      <table>
-        <thead><tr><th>Tarefa</th><th>Responsável</th><th>Peso</th></tr></thead>
-        <tbody>
-        {% for a in escala.atribuicoes %}
-          <tr class="{{ 'destaque' if a.morador_id == destaque }}">
-            <td>{{ nomes.get(a.tarefa_id, a.tarefa_id) }}</td>
-            <td>{{ nomes.get(a.morador_id, a.morador_id) }}</td>
-            <td>{{ a.peso }}</td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p class="muted">Nenhuma escala gerada ainda.</p>
-    {% endif %}
-  </section>
+    <section class="card tela-cheia">
+      <h2>Gerar próxima escala</h2>
+      <form method="post" action="{{ url_for('paginas.gerar_escala') }}">
+        <label class="campo">Início do ciclo <input name="inicio" type="date" required></label>
+        <label class="campo">Periodicidade
+          <select name="periodicidade">
+            <option value="semanal">Semanal</option>
+            <option value="quinzenal">Quinzenal</option>
+            <option value="mensal">Mensal</option>
+          </select>
+        </label>
+        <button>Gerar escala</button>
+      </form>
+    </section>
+
+    <section class="card tela-cheia">
+      <h2>Escala atual</h2>
+      {% if escala %}
+        <span class="periodo">{{ escala.ciclo.inicio.strftime('%d/%m/%Y') }} a {{ escala.ciclo.fim.strftime('%d/%m/%Y') }}</span>
+        {% if destaque and nomes.get(destaque) %}
+          <p class="aviso"><span>Destacando as tarefas de {{ nomes.get(destaque) }}</span><a href="?">limpar</a></p>
+        {% endif %}
+        <div class="tabela">
+          <table>
+            <thead><tr><th>Tarefa</th><th>Responsável</th><th>Peso</th></tr></thead>
+            <tbody>
+            {% for a in escala.atribuicoes %}
+              {% set responsavel = nomes.get(a.morador_id, a.morador_id) %}
+              <tr class="{{ 'destaque' if a.morador_id == destaque }}">
+                <td>{{ nomes.get(a.tarefa_id, a.tarefa_id) }}</td>
+                <td><span class="pessoa">{{ avatar(a.morador_id, responsavel) }}{{ responsavel }}</span></td>
+                <td><span class="peso" data-peso="{{ a.peso }}">{{ a.peso }}</span></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% set cargas = escala.carga_por_morador() %}
+        {% if cargas %}
+          {% set maximo = cargas.values()|max %}
+          <div class="cargas">
+            <h2 style="margin:.4rem 0 0">Carga por morador</h2>
+            {% for m in moradores if m.id in cargas %}
+              <div class="carga">
+                <span class="pessoa">{{ avatar(m.id, m.nome) }}{{ m.nome }}</span>
+                <span class="barra"><i style="width: {{ (cargas[m.id] * 100 / maximo)|round|int }}%"></i></span>
+                <b>{{ cargas[m.id] }}</b>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% else %}
+        <p class="vazio">Nenhuma escala gerada ainda.</p>
+      {% endif %}
+    </section>
+  </main>
 </body>
 </html>

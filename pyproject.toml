@@ -16,7 +16,7 @@ dev = ["pytest>=7", "pytest-cov>=4", "ruff>=0.4"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-escala = ["web/templates/*.html"]
+escala = ["web/templates/*.html", "web/static/*.css"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
